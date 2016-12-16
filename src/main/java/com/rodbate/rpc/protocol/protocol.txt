@@ -1,0 +1,64 @@
+
+
+#自上而下  网络传输[大端]
+
+
+<total length>  //整个包的长度  该数值本身占4个字节 解码时跳过
+
+      |
+      |
+      |
+     \|/
+
+<serialize type + header length> // 编解码格式(占一个字节)    和   包头的长度(占三个字节) 该长度值是指整个包头的内容长度
+
+      |
+      |
+      |
+     \|/
+
+   <code>  //服务端处理器序列号 int 类型 占四个字节                                                    ----------------header
+      |
+      |
+      |
+     \|/
+   <flag> //rpc 类型: 请求 还是响应 还是单次rpc  byte类型 占一个字节
+      |
+      |
+      |
+     \|/
+    <seq>  //序列号 每一对请求和响应的序列号是相同的  int 类型 占四个字节
+      |
+      |
+      |
+     \|/
+  <language>  //语言类型  byte类型 占一个字节
+      |
+      |
+      |
+     \|/
+ <remark length> //备注长度 short类型 占两个字节
+       |
+       |
+       |
+      \|/
+  <remark data>  //备注内容字节数组
+       |
+       |
+       |
+      \|/
+<ext header length> //扩展头字段长度 short
+       |
+       |
+       |
+      \|/
+<ext header data>   //length >0 才有数据  内部组织结构
+                    //keyLength[byte]->keyData[byte[]]->valueLength[short]->valueData[byte[]]       ---------------header
+
+       |
+       |
+       |
+      \|/
+
+
+   <body data>   //body 内容 字节数组
