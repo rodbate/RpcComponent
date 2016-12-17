@@ -70,7 +70,7 @@ public class RBRpcSerializable {
 
 
     //反序列化map
-    public static Map<String, String> mapDeserialize(final byte[] data)
+    private static Map<String, String> mapDeserialize(final byte[] data)
     {
 
         Map<String, String> map = new HashMap<>();
