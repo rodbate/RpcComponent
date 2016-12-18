@@ -13,6 +13,8 @@ public class RpcCommandSerializable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcCommandSerializable.class);
 
+    private static final Gson GSON = new Gson();
+
 
     public static <T> T fromJson(byte[] data, Class<T> clazz)
     {
@@ -20,10 +22,8 @@ public class RpcCommandSerializable {
         Objects.requireNonNull(data);
         Objects.requireNonNull(clazz);
 
-        Gson gson = new Gson();
 
-
-        return gson.fromJson(new String(data, RpcCommandHelper.CHARSET_UTF8), clazz);
+        return GSON.fromJson(new String(data, RpcCommandHelper.CHARSET_UTF8), clazz);
     }
 
 
@@ -32,9 +32,7 @@ public class RpcCommandSerializable {
 
         Objects.requireNonNull(obj);
 
-        Gson gson = new Gson();
-
-        return gson.toJson(obj);
+        return GSON.toJson(obj);
     }
 
 

@@ -2,6 +2,8 @@ package com.rodbate.rpc.protocol;
 
 
 import com.google.gson.Gson;
+import com.google.gson.annotations.Expose;
+import com.rodbate.rpc.exception.RpcCommandException;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -72,10 +74,9 @@ public class RpcCommand {
     //头部可扩展字段
     private Map<String, String> extFields;
 
+    private transient CommandCustomHeader commandCustomHeader;
 
-    private CommandCustomHeader commandCustomHeader;
-
-    private byte[] body;
+    private transient byte[] body;
 
 
     /**
@@ -189,9 +190,34 @@ public class RpcCommand {
         return serializeAndHead & 0xFFFFFF;
     }
 
+
+    //
+
     public static void main(String[] args) {
 
-        System.out.println(new Gson().toJson(new RpcCommand()));
+        RpcCommand cmd = new RpcCommand();
+        cmd.setRemark("re");
+        cmd.setExtFields(new HashMap<>());
+        cmd.setCommandCustomHeader(new CommandCustomHeader() {
+
+            private int f;
+
+            public int getF() {
+                return f;
+            }
+
+            public void setF(int f) {
+                this.f = f;
+            }
+
+            @Override
+            public void checkFields() throws RpcCommandException {
+
+            }
+        });
+        cmd.setBody("aaa".getBytes());
+
+        System.out.println(new Gson().toJson(cmd));
 
     }
 
@@ -252,5 +278,21 @@ public class RpcCommand {
 
     public void setExtFields(Map<String, String> extFields) {
         this.extFields = extFields;
+    }
+
+    public CommandCustomHeader getCommandCustomHeader() {
+        return commandCustomHeader;
+    }
+
+    public void setCommandCustomHeader(CommandCustomHeader commandCustomHeader) {
+        this.commandCustomHeader = commandCustomHeader;
+    }
+
+    public byte[] getBody() {
+        return body;
+    }
+
+    public void setBody(byte[] body) {
+        this.body = body;
     }
 }
