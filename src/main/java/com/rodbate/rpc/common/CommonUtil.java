@@ -4,7 +4,6 @@ package com.rodbate.rpc.common;
 import io.netty.channel.Channel;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Objects;
 
 public class CommonUtil {
@@ -21,6 +20,18 @@ public class CommonUtil {
 
         return socketAddress.getAddress().getHostAddress();
     }
+
+
+    public static boolean isNotEmpty(final String src)
+    {
+        return (src != null) && (src.trim().length() > 0);
+    }
+
+    public static boolean isEmpty(final String src)
+    {
+        return !isNotEmpty(src);
+    }
+
 
     public static void main(String[] args) {
 

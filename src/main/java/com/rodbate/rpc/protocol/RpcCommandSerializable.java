@@ -6,7 +6,6 @@ import com.rodbate.rpc.common.RpcCommandHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.UnsupportedEncodingException;
 import java.util.Objects;
 
 public class RpcCommandSerializable {
@@ -33,6 +32,11 @@ public class RpcCommandSerializable {
         Objects.requireNonNull(obj);
 
         return GSON.toJson(obj);
+    }
+
+    public static byte[] encode(Object obj)
+    {
+        return toJson(obj).getBytes(RpcCommandHelper.CHARSET_UTF8);
     }
 
 

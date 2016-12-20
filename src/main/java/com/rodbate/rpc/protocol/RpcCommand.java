@@ -2,11 +2,8 @@ package com.rodbate.rpc.protocol;
 
 
 import com.google.gson.Gson;
-import com.google.gson.annotations.Expose;
-import com.rodbate.rpc.exception.RpcCommandException;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -150,6 +147,80 @@ public class RpcCommand {
         return cmd;
     }
 
+
+
+    public ByteBuffer encode()
+    {
+
+        //total length
+        int totalLength = 4;
+
+        //serialize type + header length
+        totalLength += 4;
+
+        byte[] headerData = encodeHeader();
+
+        totalLength += headerData.length;
+
+        if (this.body != null)
+        {
+            totalLength += this.body.length;
+        }
+
+        ByteBuffer buffer = ByteBuffer.allocate(totalLength);
+
+        //serialize type + header length
+        byte[] serializeAndHeaderLength = getSerializeAndHeaderLength(headerData.length);
+
+        buffer.putInt(totalLength);
+
+        buffer.put(serializeAndHeaderLength);
+
+        buffer.put(headerData);
+
+        if (this.body != null)
+        {
+            buffer.put(this.body);
+        }
+
+        buffer.flip();
+
+        return buffer;
+    }
+
+    private byte[] getSerializeAndHeaderLength(int headerLength)
+    {
+
+        byte[] ths = new byte[4];
+
+        ths[0] = this.rpcSerializableType;
+        ths[1] = (byte) ((headerLength >>> 16) & 0xFF);
+        ths[2] = (byte) ((headerLength >>> 8) & 0xFF);
+        ths[3] = (byte) (headerLength & 0xFF);
+
+        return ths;
+    }
+
+
+    private byte[] encodeHeader()
+    {
+
+        SerializeType serializeType = SerializeType.valueOf(this.rpcSerializableType);
+
+        if (serializeType == SerializeType.JSON)
+        {
+            return RpcCommandSerializable.encode(this);
+        }
+        else
+        {
+            return RBRpcSerializable.encoderHeader(this);
+        }
+
+    }
+
+
+
+
     private static SerializeType getProtocolType(int serializeAndHead) {
         return SerializeType.valueOf((byte)((serializeAndHead >>> 24) & 0xFF));
     }
@@ -190,34 +261,65 @@ public class RpcCommand {
         return serializeAndHead & 0xFFFFFF;
     }
 
+    public RpcCommandType getCmdType()
+    {
+        if (isRpcResponse())
+        {
+            return RpcCommandType.RESPONSE_COMMAND;
+        }
 
-    //
+        return RpcCommandType.REQUEST_COMMAND;
+    }
+
+
+    public static RpcCommand createResponseCommand(int code, String remark)
+    {
+        return createResponseCommand(code, remark, null);
+    }
+
+    public static RpcCommand createResponseCommand(int code, String remark, Class<? extends CommandCustomHeader> header)
+    {
+        RpcCommand cmd = new RpcCommand();
+        cmd.setCode(code);
+        cmd.setRemark(remark);
+        cmd.markRpcResponse();
+
+        if (header != null)
+        {
+            try {
+                CommandCustomHeader commandCustomHeader = header.newInstance();
+                cmd.setCommandCustomHeader(commandCustomHeader);
+            } catch (InstantiationException e) {
+                return null;
+            } catch (IllegalAccessException e) {
+                return null;
+            }
+        }
+
+        return cmd;
+    }
+
 
     public static void main(String[] args) {
 
         RpcCommand cmd = new RpcCommand();
-        cmd.setRemark("re");
-        cmd.setExtFields(new HashMap<>());
-        cmd.setCommandCustomHeader(new CommandCustomHeader() {
+        cmd.setCode(1);
+        cmd.setRemark("test remark");
+        //cmd.setRpcSerializableType(SerializeType.RBRPC.getCode());
+        cmd.setBody("request".getBytes());
+        System.out.println("before " + new Gson().toJson(cmd));
 
-            private int f;
+        ByteBuffer buffer = cmd.encode();
 
-            public int getF() {
-                return f;
-            }
+        System.out.println(new Gson().toJson(buffer.array()));
 
-            public void setF(int f) {
-                this.f = f;
-            }
+        buffer.getInt();
 
-            @Override
-            public void checkFields() throws RpcCommandException {
+        ByteBuffer slice = buffer.slice();
 
-            }
-        });
-        cmd.setBody("aaa".getBytes());
+        System.out.println(new Gson().toJson(slice.array()));
 
-        System.out.println(new Gson().toJson(cmd));
+        System.out.println("decode" + new Gson().toJson(decode(slice)));
 
     }
 
