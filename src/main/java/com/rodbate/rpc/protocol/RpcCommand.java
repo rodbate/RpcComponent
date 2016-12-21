@@ -2,8 +2,14 @@ package com.rodbate.rpc.protocol;
 
 
 import com.google.gson.Gson;
+import com.rodbate.rpc.common.FieldNotNull;
+import com.rodbate.rpc.exception.RpcCommandException;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -18,6 +24,11 @@ public class RpcCommand {
 
     private static AtomicInteger requestId = new AtomicInteger(0);
 
+    private static final Map<Class<? extends CommandCustomHeader>, Field[]> CLASS_TO_FIELDS_CACHE =
+            new HashMap<>();
+
+    private static final Map<Field, Annotation> FIELD_TO_NOT_NULL_ANNOTATION_CACHE =
+            new HashMap<>();
 
     private final static SerializeType rpcSerializableTypeInThisServer = SerializeType.JSON;
 
@@ -205,6 +216,8 @@ public class RpcCommand {
     private byte[] encodeHeader()
     {
 
+        encodeCustomHeader();
+
         SerializeType serializeType = SerializeType.valueOf(this.rpcSerializableType);
 
         if (serializeType == SerializeType.JSON)
@@ -218,6 +231,155 @@ public class RpcCommand {
 
     }
 
+
+    private void decodeCustomHeader() throws RpcCommandException {
+
+        if (extFields != null && !extFields.isEmpty() && commandCustomHeader != null)
+        {
+            Field[] allFields = getFieldsFromCache(commandCustomHeader.getClass());
+
+            for (Field f : allFields)
+            {
+                String name = f.getName();
+
+                if (!Modifier.isStatic(f.getModifiers()) &&
+                        !name.startsWith("this")) {
+
+                    boolean access = f.isAccessible();
+
+                    try {
+
+                        String value = extFields.get(name);
+
+                        if (value == null)
+                        {
+                            if (getAnnotationForField(f) != null) {
+                                throw new RpcCommandException("Field <" + name + "> require not null");
+                            }
+
+                            continue;
+                        }
+
+                        f.setAccessible(true);
+
+                        Class<?> type = f.getType();
+
+                        if (type == Integer.class || type == int.class)
+                        {
+                            f.set(commandCustomHeader, Integer.valueOf(value));
+                        }
+                        else if (type == Long.class || type == long.class)
+                        {
+                            f.set(commandCustomHeader, Long.valueOf(value));
+                        }
+                        else if (type == String.class)
+                        {
+                            f.set(commandCustomHeader, value);
+                        }
+                        else if (type == Double.class || type == double.class)
+                        {
+                            f.set(commandCustomHeader, Double.valueOf(value));
+                        }
+                        else if (type == Float.class || type == float.class)
+                        {
+                            f.set(commandCustomHeader, Float.valueOf(value));
+                        }
+                        else if (type == Short.class || type == short.class)
+                        {
+                            f.set(commandCustomHeader, Short.valueOf(value));
+                        }
+                        else if (type == Byte.class || type == byte.class)
+                        {
+                            f.set(commandCustomHeader, Byte.valueOf(value));
+                        }
+                        else if (type == Boolean.class || type == boolean.class)
+                        {
+                            f.set(commandCustomHeader, Boolean.parseBoolean(value));
+                        }
+                        else
+                        {
+                            throw new RpcCommandException("the custom field type <" + type.getCanonicalName() + "> not support!");
+                        }
+
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    } finally {
+                        f.setAccessible(access);
+                    }
+                }
+
+            }
+        }
+
+    }
+
+    private Annotation getAnnotationForField(Field field)
+    {
+        Annotation annotation = FIELD_TO_NOT_NULL_ANNOTATION_CACHE.get(field);
+
+        if (annotation == null)
+        {
+            annotation = field.getAnnotation(FieldNotNull.class);
+            synchronized (FIELD_TO_NOT_NULL_ANNOTATION_CACHE){
+                FIELD_TO_NOT_NULL_ANNOTATION_CACHE.put(field, annotation);
+            }
+        }
+        return annotation;
+    }
+
+    private void encodeCustomHeader()
+    {
+        if (commandCustomHeader != null)
+        {
+            Field[] fields = getFieldsFromCache(commandCustomHeader.getClass());
+
+            if (extFields == null)
+            {
+                extFields = new HashMap<>();
+            }
+
+            for (Field f : fields)
+            {
+                if (!Modifier.isStatic(f.getModifiers()) &&
+                        !f.getName().startsWith("this")) {
+
+                    boolean access = f.isAccessible();
+
+                    try {
+                        f.setAccessible(true);
+
+                        Object value = f.get(commandCustomHeader);
+
+                        if (value != null)
+                        {
+                            extFields.put(f.getName(), value.toString());
+                        }
+
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    } finally {
+                        f.setAccessible(access);
+                    }
+                }
+            }
+        }
+
+    }
+
+    private Field[] getFieldsFromCache(Class<? extends CommandCustomHeader> clazz)
+    {
+        Field[] fields = CLASS_TO_FIELDS_CACHE.get(clazz);
+
+        if (fields == null)
+        {
+            fields = clazz.getDeclaredFields();
+            synchronized (CLASS_TO_FIELDS_CACHE){
+                CLASS_TO_FIELDS_CACHE.put(clazz, fields);
+            }
+        }
+
+        return fields;
+    }
 
 
 
@@ -271,6 +433,19 @@ public class RpcCommand {
         return RpcCommandType.REQUEST_COMMAND;
     }
 
+    public static RpcCommand createRequestCommand(int code, String remark){
+        return createRequestCommand(code, remark, null);
+    }
+
+    public static RpcCommand createRequestCommand(int code, String remark, CommandCustomHeader header)
+    {
+        RpcCommand command = new RpcCommand();
+        command.setCode(code);
+        command.setRemark(remark);
+        command.setCommandCustomHeader(header);
+        return command;
+    }
+
 
     public static RpcCommand createResponseCommand(int code, String remark)
     {
@@ -300,13 +475,14 @@ public class RpcCommand {
     }
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws RpcCommandException {
 
         RpcCommand cmd = new RpcCommand();
         cmd.setCode(1);
         cmd.setRemark("test remark");
         //cmd.setRpcSerializableType(SerializeType.RBRPC.getCode());
         cmd.setBody("request".getBytes());
+        cmd.setCommandCustomHeader(new TestHeader(11,"fdsfds222", "fff".getBytes()));
         System.out.println("before " + new Gson().toJson(cmd));
 
         ByteBuffer buffer = cmd.encode();
@@ -319,9 +495,70 @@ public class RpcCommand {
 
         System.out.println(new Gson().toJson(slice.array()));
 
-        System.out.println("decode" + new Gson().toJson(decode(slice)));
+        RpcCommand decode = decode(slice);
+        decode.setCommandCustomHeader(new TestHeader(1111,"dsfdsf"));
+
+        decode.getCommandCustomHeader();
+
+        System.out.println("decode" + new Gson().toJson(decode));
 
     }
+
+    static class TestHeader implements CommandCustomHeader {
+
+        private int age;
+
+        @FieldNotNull
+        private String name;
+
+
+        private byte[] a;
+
+        public TestHeader(int age, String name, byte[] a) {
+            this.age = age;
+            this.name = name;
+            this.a = a;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public byte[] getA() {
+            return a;
+        }
+
+        public void setA(byte[] a) {
+            this.a = a;
+        }
+
+        public TestHeader(int age) {
+            this.age = age;
+        }
+
+        public TestHeader(int age, String name) {
+            this.age = age;
+            this.name = name;
+        }
+
+        @Override
+        public void checkFields() throws RpcCommandException {
+
+        }
+    }
+
 
 
 
@@ -382,7 +619,8 @@ public class RpcCommand {
         this.extFields = extFields;
     }
 
-    public CommandCustomHeader getCommandCustomHeader() {
+    public CommandCustomHeader getCommandCustomHeader() throws RpcCommandException {
+        decodeCustomHeader();
         return commandCustomHeader;
     }
 

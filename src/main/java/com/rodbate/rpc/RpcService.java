@@ -23,21 +23,7 @@ public interface RpcService {
 
     void registerProcessor(final int requestCode, final NettyRpcRequestProcessor processor, final ExecutorService service);
 
+    void registerDefaultProcessor(final NettyRpcRequestProcessor processor, final ExecutorService service);
 
-    RpcCommand invokeSync(final Channel channel, final RpcCommand request)
-            throws InterruptedException, RpcTimeoutException, RpcSendRequestException;
-
-
-    RpcCommand invokeSync(final Channel channel, final RpcCommand request, final long timeoutMillis)
-            throws InterruptedException, RpcTimeoutException, RpcSendRequestException;
-
-
-    void invokeAsync(final Channel channel, final RpcCommand request, final long timeoutMillis, final InvokeCallback callback)
-            throws InterruptedException, RpcTooMuchRequestException, RpcSendRequestException;
-
-
-
-    void invokeOneWay(final Channel channel, final RpcCommand request, final long timeoutMillis)
-            throws InterruptedException, RpcSendRequestException, RpcTooMuchRequestException;
 
 }

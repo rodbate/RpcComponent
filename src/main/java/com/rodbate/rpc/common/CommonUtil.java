@@ -4,6 +4,7 @@ package com.rodbate.rpc.common;
 import io.netty.channel.Channel;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Objects;
 
 public class CommonUtil {
@@ -11,6 +12,7 @@ public class CommonUtil {
 
 
 
+    //127.0.0.1:8888
     public static String getRemoteAddressFromChannel(Channel channel)
     {
 
@@ -18,7 +20,16 @@ public class CommonUtil {
 
         InetSocketAddress socketAddress = (InetSocketAddress) channel.remoteAddress();
 
-        return socketAddress.getAddress().getHostAddress();
+        return String.format("%s:%d", socketAddress.getHostName(), socketAddress.getPort());
+    }
+
+    public static SocketAddress stringAddressToSocketAddress(String address)
+    {
+        Objects.requireNonNull(address);
+
+        String[] strings = address.split(":");
+
+        return new InetSocketAddress(strings[0], Integer.valueOf(strings[1]));
     }
 
 

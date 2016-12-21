@@ -59,7 +59,7 @@ public abstract class NettyRpcAbstract {
         this.semaphoreOneWay = new Semaphore(oneWayPermits, true);
     }
 
-    private final ChannelEventExecutor eventExecutor = new ChannelEventExecutor();
+    protected final ChannelEventExecutor eventExecutor = new ChannelEventExecutor();
 
 
 
