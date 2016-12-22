@@ -20,7 +20,11 @@ public class CommonUtil {
 
         InetSocketAddress socketAddress = (InetSocketAddress) channel.remoteAddress();
 
-        return String.format("%s:%d", socketAddress.getHostName(), socketAddress.getPort());
+        if (socketAddress != null) {
+            return String.format("%s:%d", socketAddress.getHostName(), socketAddress.getPort());
+        }
+
+        return "";
     }
 
     public static SocketAddress stringAddressToSocketAddress(String address)

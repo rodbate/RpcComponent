@@ -10,7 +10,7 @@ package com.rodbate.rpc.netty;
 public class NettyServerConfig {
 
 
-
+    private String hostName = "localhost";
     private int listenPort = 8888;
     private int serverWorkThreads = 8;
     private int serverCallbackExecutorThreads = 0;
@@ -26,6 +26,14 @@ public class NettyServerConfig {
 
 
     private boolean userEPollNativeSelector = false;
+
+    public String getHostName() {
+        return hostName;
+    }
+
+    public void setHostName(String hostName) {
+        this.hostName = hostName;
+    }
 
     public int getListenPort() {
         return listenPort;

@@ -24,6 +24,7 @@ import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -178,8 +179,6 @@ public class NettyRpcServer extends NettyRpcAbstract implements RpcServer {
 
                 .option(ChannelOption.SO_REUSEADDR, true)
 
-                .localAddress(this.port = nettyServerConfig.getListenPort())
-
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
@@ -205,7 +204,10 @@ public class NettyRpcServer extends NettyRpcAbstract implements RpcServer {
 
         try {
 
-            bootstrap.bind().sync().channel();
+            this.port = nettyServerConfig.getListenPort();
+
+            bootstrap.bind(new InetSocketAddress(nettyServerConfig.getHostName(),
+                    nettyServerConfig.getListenPort())).sync().channel();
 
             LOGGER.info("Rpc Netty Server start successfully , bind port [{}]", this.port);
 

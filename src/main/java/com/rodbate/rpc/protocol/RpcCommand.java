@@ -11,6 +11,7 @@ import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -164,7 +165,7 @@ public class RpcCommand {
     {
 
         //total length
-        int totalLength = 4;
+        int totalLength = 0;
 
         //serialize type + header length
         totalLength += 4;
@@ -178,7 +179,7 @@ public class RpcCommand {
             totalLength += this.body.length;
         }
 
-        ByteBuffer buffer = ByteBuffer.allocate(totalLength);
+        ByteBuffer buffer = ByteBuffer.allocate(totalLength + 4);
 
         //serialize type + header length
         byte[] serializeAndHeaderLength = getSerializeAndHeaderLength(headerData.length);
@@ -232,7 +233,11 @@ public class RpcCommand {
     }
 
 
-    private void decodeCustomHeader() throws RpcCommandException {
+    public void decodeCustomHeader(Class<? extends CommandCustomHeader> headerClass) throws Exception {
+
+        Objects.requireNonNull(headerClass);
+
+        this.commandCustomHeader = headerClass.newInstance();
 
         if (extFields != null && !extFields.isEmpty() && commandCustomHeader != null)
         {
@@ -254,7 +259,7 @@ public class RpcCommand {
                         if (value == null)
                         {
                             if (getAnnotationForField(f) != null) {
-                                throw new RpcCommandException("Field <" + name + "> require not null");
+                                throw new RpcCommandException("Field [" + name + "] require not null");
                             }
 
                             continue;
@@ -309,6 +314,8 @@ public class RpcCommand {
                 }
 
             }
+
+            commandCustomHeader.checkFields();
         }
 
     }
@@ -475,94 +482,6 @@ public class RpcCommand {
     }
 
 
-    public static void main(String[] args) throws RpcCommandException {
-
-        RpcCommand cmd = new RpcCommand();
-        cmd.setCode(1);
-        cmd.setRemark("test remark");
-        //cmd.setRpcSerializableType(SerializeType.RBRPC.getCode());
-        cmd.setBody("request".getBytes());
-        cmd.setCommandCustomHeader(new TestHeader(11,"fdsfds222", "fff".getBytes()));
-        System.out.println("before " + new Gson().toJson(cmd));
-
-        ByteBuffer buffer = cmd.encode();
-
-        System.out.println(new Gson().toJson(buffer.array()));
-
-        buffer.getInt();
-
-        ByteBuffer slice = buffer.slice();
-
-        System.out.println(new Gson().toJson(slice.array()));
-
-        RpcCommand decode = decode(slice);
-        decode.setCommandCustomHeader(new TestHeader(1111,"dsfdsf"));
-
-        decode.getCommandCustomHeader();
-
-        System.out.println("decode" + new Gson().toJson(decode));
-
-    }
-
-    static class TestHeader implements CommandCustomHeader {
-
-        private int age;
-
-        @FieldNotNull
-        private String name;
-
-
-        private byte[] a;
-
-        public TestHeader(int age, String name, byte[] a) {
-            this.age = age;
-            this.name = name;
-            this.a = a;
-        }
-
-        public int getAge() {
-            return age;
-        }
-
-        public void setAge(int age) {
-            this.age = age;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public byte[] getA() {
-            return a;
-        }
-
-        public void setA(byte[] a) {
-            this.a = a;
-        }
-
-        public TestHeader(int age) {
-            this.age = age;
-        }
-
-        public TestHeader(int age, String name) {
-            this.age = age;
-            this.name = name;
-        }
-
-        @Override
-        public void checkFields() throws RpcCommandException {
-
-        }
-    }
-
-
-
-
-
     public int getCode() {
         return code;
     }
@@ -620,7 +539,6 @@ public class RpcCommand {
     }
 
     public CommandCustomHeader getCommandCustomHeader() throws RpcCommandException {
-        decodeCustomHeader();
         return commandCustomHeader;
     }
 

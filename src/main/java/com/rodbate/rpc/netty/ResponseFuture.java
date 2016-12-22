@@ -64,7 +64,11 @@ public class ResponseFuture {
 
     public boolean isTimeout()
     {
-        long diff = System.currentTimeMillis() - beginTimestamp;
+        if (timeoutMillis == 0)
+        {
+            return false;
+        }
+        long diff = System.currentTimeMillis() - beginTimestamp - 1000;
         return diff > timeoutMillis;
     }
 

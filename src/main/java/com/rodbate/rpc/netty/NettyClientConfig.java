@@ -7,17 +7,15 @@ package com.rodbate.rpc.netty;
 public class NettyClientConfig {
 
 
-    private int clientSelectorThreadNums = 4;
-
     private int clientWorkerThreadNums = 4;
 
-    private int clientCallbackThreadNums = Runtime.getRuntime().availableProcessors();
+    private int clientCallbackThreadNums = 4;
 
 
     private int clientSemaphoreAsyncValue = 256;
     private int clientSemaphoreOneWayValue = 64;
 
-    private int connectTimeoutMillis = 3000;
+    private int connectTimeoutMillis = 10000;
 
     private int clientChannelIdleTimeSeconds = 120;
 
@@ -28,13 +26,6 @@ public class NettyClientConfig {
 
     private boolean clientCloseSocketIfTimeout = false;
 
-    public int getClientSelectorThreadNums() {
-        return clientSelectorThreadNums;
-    }
-
-    public void setClientSelectorThreadNums(int clientSelectorThreadNums) {
-        this.clientSelectorThreadNums = clientSelectorThreadNums;
-    }
 
     public int getClientWorkerThreadNums() {
         return clientWorkerThreadNums;

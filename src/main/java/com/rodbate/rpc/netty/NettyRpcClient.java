@@ -78,12 +78,17 @@ public class NettyRpcClient extends NettyRpcAbstract implements RpcClient {
     private final static long LOCK_TIMEOUT_MILLIS = 3000;
 
 
+    public NettyRpcClient(NettyClientConfig nettyClientConfig) {
+        this(nettyClientConfig, null);
+    }
+
+
     public NettyRpcClient(NettyClientConfig nettyClientConfig, ChannelEventListener channelEventListener) {
         super(nettyClientConfig.getClientSemaphoreAsyncValue(), nettyClientConfig.getClientSemaphoreOneWayValue());
         this.nettyClientConfig = nettyClientConfig;
         this.channelEventListener = channelEventListener;
 
-        this.eventLoopGroupSelector = new NioEventLoopGroup(nettyClientConfig.getClientSelectorThreadNums(),
+        this.eventLoopGroupSelector = new NioEventLoopGroup(1,
                 new ThreadFactory() {
 
                     private AtomicInteger index = new AtomicInteger(1);
@@ -152,27 +157,21 @@ public class NettyRpcClient extends NettyRpcAbstract implements RpcClient {
 
         this.bootstrap.group(eventLoopGroupSelector).channel(NioSocketChannel.class)
 
-                .option(ChannelOption.SO_BACKLOG, 1024)
-
                 .option(ChannelOption.SO_KEEPALIVE, false)
 
                 .option(ChannelOption.TCP_NODELAY, true)
+
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, nettyClientConfig.getConnectTimeoutMillis())
 
                 .option(ChannelOption.SO_RCVBUF, nettyClientConfig.getClientSocketRcvBufSize())
 
                 .option(ChannelOption.SO_SNDBUF, nettyClientConfig.getClientSocketSndBufSize())
 
-                .option(ChannelOption.SO_REUSEADDR, true)
-
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, nettyClientConfig.getConnectTimeoutMillis())
-
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
 
-                        ChannelPipeline pipeline = ch.pipeline();
-
-                        pipeline.addLast(
+                        ch.pipeline().addLast(
                                 defaultEventExecutorGroup,
                                 new RpcNettyEncoder(),
                                 new RpcNettyDecoder(),
@@ -195,6 +194,11 @@ public class NettyRpcClient extends NettyRpcAbstract implements RpcClient {
                 scanResponseFutureMap();
             }
         }, 4000, 1000);
+    }
+
+    public Bootstrap getBootstrap()
+    {
+        return bootstrap;
     }
 
     @Override
@@ -320,7 +324,7 @@ public class NettyRpcClient extends NettyRpcAbstract implements RpcClient {
                     rpcHook.doBeforeRequest(address, request);
                 }
 
-                RpcCommand response = invokeSyncImpl(channel, request);
+                RpcCommand response = invokeSyncImpl(channel, request, timeoutMillis);
 
                 if (rpcHook != null) {
                     rpcHook.doAfterResponse(address, request, response);
@@ -618,7 +622,7 @@ public class NettyRpcClient extends NettyRpcAbstract implements RpcClient {
 
                 if (createNewConn)
                 {
-                    ChannelFuture channelFuture = bootstrap.connect(stringAddressToSocketAddress(address));
+                    ChannelFuture channelFuture = this.bootstrap.connect(stringAddressToSocketAddress(address));
 
                     LOGGER.info("createNewChannel : connect the remote channel <{}> asynchronously ", address);
 
@@ -705,8 +709,11 @@ public class NettyRpcClient extends NettyRpcAbstract implements RpcClient {
         @Override
         public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise)
                 throws Exception {
-            LOGGER.info("Netty Client Pipeline : connect <{}>", getRemoteAddressFromChannel(ctx.channel()));
+            final String local = localAddress == null ? "UNKNOW" : localAddress.toString();
+            final String remote = remoteAddress == null ? "UNKNOW" : remoteAddress.toString();
+            LOGGER.info("NETTY CLIENT PIPELINE: CONNECT  {} => {}", local, remote);
 
+            super.connect(ctx, remoteAddress, localAddress, promise);
             //connect
             if (channelEventListener != null)
             {
@@ -714,14 +721,15 @@ public class NettyRpcClient extends NettyRpcAbstract implements RpcClient {
                         getRemoteAddressFromChannel(ctx.channel()),
                         ctx.channel()));
             }
-            super.connect(ctx, remoteAddress, localAddress, promise);
+
         }
 
         @Override
         public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
 
             LOGGER.info("Netty Client Pipeline : disconnect <{}>", getRemoteAddressFromChannel(ctx.channel()));
-
+            RpcCommandHelper.closeChannel(ctx.channel());
+            super.disconnect(ctx, promise);
             //connect
             if (channelEventListener != null)
             {
@@ -729,35 +737,38 @@ public class NettyRpcClient extends NettyRpcAbstract implements RpcClient {
                         getRemoteAddressFromChannel(ctx.channel()),
                         ctx.channel()));
             }
-            super.disconnect(ctx, promise);
+
         }
 
         @Override
         public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             LOGGER.info("Netty Client Pipeline : close <{}>", getRemoteAddressFromChannel(ctx.channel()));
+            RpcCommandHelper.closeChannel(ctx.channel());
+            super.close(ctx, promise);
 
-            //connect
+
+
             if (channelEventListener != null)
             {
                 registerChannelEvent(new ChannelEvent(ChannelEventType.CLOSE,
                         getRemoteAddressFromChannel(ctx.channel()),
                         ctx.channel()));
             }
-            super.close(ctx, promise);
+
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             LOGGER.info("Netty Client Pipeline : exceptionCaught <{}>", getRemoteAddressFromChannel(ctx.channel()));
             LOGGER.info("Netty Client Pipeline : throw an exception {}", cause.getMessage());
-
+            RpcCommandHelper.closeChannel(ctx.channel());
             if (channelEventListener != null)
             {
                 registerChannelEvent(new ChannelEvent(ChannelEventType.EXCEPTION,
                         getRemoteAddressFromChannel(ctx.channel()),
                         ctx.channel()));
             }
-            RpcCommandHelper.closeChannel(ctx.channel());
+
         }
 
         @Override
