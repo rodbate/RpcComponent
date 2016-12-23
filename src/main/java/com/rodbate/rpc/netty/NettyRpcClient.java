@@ -89,26 +89,10 @@ public class NettyRpcClient extends NettyRpcAbstract implements RpcClient {
         this.channelEventListener = channelEventListener;
 
         this.eventLoopGroupSelector = new NioEventLoopGroup(1,
-                new ThreadFactory() {
-
-                    private AtomicInteger index = new AtomicInteger(1);
-
-                    @Override
-                    public Thread newThread(Runnable r) {
-                        return new Thread(r, "ClientSelectorEventGroup-Thread-" + index.getAndIncrement());
-                    }
-                });
+                new DefaultThreadFactory("ClientSelectorEventGroup-Thread"));
 
         this.publicExecutor = Executors.newFixedThreadPool(nettyClientConfig.getClientCallbackThreadNums(),
-                new ThreadFactory() {
-
-                    private AtomicInteger index = new AtomicInteger(1);
-
-                    @Override
-                    public Thread newThread(Runnable r) {
-                        return new Thread(r, "ClientPublicExecutor-Thread-" + index.getAndIncrement());
-                    }
-                });
+                new DefaultThreadFactory("ClientPublicExecutor-Thread"));
     }
 
     @Override
@@ -144,15 +128,7 @@ public class NettyRpcClient extends NettyRpcAbstract implements RpcClient {
     public void start() {
 
         this.defaultEventExecutorGroup = new DefaultEventExecutorGroup(nettyClientConfig.getClientWorkerThreadNums(),
-                new ThreadFactory() {
-
-                    private AtomicInteger index = new AtomicInteger(1);
-
-                    @Override
-                    public Thread newThread(Runnable r) {
-                        return new Thread(r, "ClientCodecEventGroup-Thread-" + index.getAndIncrement());
-                    }
-                });
+                new DefaultThreadFactory("ClientCodecEventGroup-Thread"));
 
 
         this.bootstrap.group(eventLoopGroupSelector).channel(NioSocketChannel.class)

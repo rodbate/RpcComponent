@@ -86,34 +86,13 @@ public class NettyRpcServer extends NettyRpcAbstract implements RpcServer {
             publicThreadNums = 4;
         }
 
-        this.publicExecutor = Executors.newFixedThreadPool(publicThreadNums, new ThreadFactory() {
+        this.publicExecutor = Executors.newFixedThreadPool(publicThreadNums, new DefaultThreadFactory("NettyServerPublicExecutor-Thread"));
 
-            private AtomicInteger threadIndex = new AtomicInteger(1);
-
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "NettyServerPublicExecutor-Thread-" + threadIndex.getAndIncrement());
-            }
-        });
-
-        this.eventLoopGroupBoss = new NioEventLoopGroup(1, new ThreadFactory() {
-            private AtomicInteger threadIndex = new AtomicInteger(1);
-
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "NettyServerBoss-Thread-" + threadIndex.getAndIncrement());
-            }
-        });
+        this.eventLoopGroupBoss = new NioEventLoopGroup(1, new DefaultThreadFactory("NettyServerBoss-Thread"));
 
 
-        this.eventLoopGroupSelector = new NioEventLoopGroup(nettyServerConfig.getServerSelectorThreads(), new ThreadFactory() {
-            private AtomicInteger threadIndex = new AtomicInteger(1);
-
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "NettyServerSelector-Thread-" + threadIndex.getAndIncrement());
-            }
-        });
+        this.eventLoopGroupSelector = new NioEventLoopGroup(nettyServerConfig.getServerSelectorThreads(),
+                new DefaultThreadFactory("NettyServerSelector-Thread"));
 
     }
 
@@ -153,14 +132,7 @@ public class NettyRpcServer extends NettyRpcAbstract implements RpcServer {
     public void start() {
 
         this.defaultEventExecutorGroup = new DefaultEventExecutorGroup(nettyServerConfig.getServerWorkThreads(),
-                new ThreadFactory() {
-                    private AtomicInteger threadIndex = new AtomicInteger(1);
-
-                    @Override
-                    public Thread newThread(Runnable r) {
-                        return new Thread(r, "DefaultEventExecutorGroup-Thread-" + threadIndex.getAndIncrement());
-                    }
-                });
+                new DefaultThreadFactory("DefaultEventExecutorGroup-Thread"));
 
 
         ServerBootstrap bootstrap = this.serverBootstrap.group(this.eventLoopGroupBoss, this.eventLoopGroupSelector)
