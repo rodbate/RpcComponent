@@ -15,6 +15,7 @@ import com.rodbate.rpc.exception.RpcTooMuchRequestException;
 import com.rodbate.rpc.protocol.RpcCommand;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
+import io.netty.channel.local.LocalAddress;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -25,6 +26,7 @@ import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.*;
@@ -687,7 +689,7 @@ public class NettyRpcClient extends NettyRpcAbstract implements RpcClient {
                 throws Exception {
             final String local = localAddress == null ? "UNKNOW" : localAddress.toString();
             final String remote = remoteAddress == null ? "UNKNOW" : remoteAddress.toString();
-            LOGGER.info("NETTY CLIENT PIPELINE: CONNECT  {} => {}", local, remote);
+            LOGGER.info("NETTY Client Pipeline: connect  {} => {}", local, remote);
 
             super.connect(ctx, remoteAddress, localAddress, promise);
             //connect
