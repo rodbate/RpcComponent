@@ -453,6 +453,10 @@ public class RpcCommand {
         return command;
     }
 
+    public static RpcCommand createResponseCommand()
+    {
+        return new RpcCommand();
+    }
 
     public static RpcCommand createResponseCommand(int code, String remark)
     {
