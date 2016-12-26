@@ -247,8 +247,7 @@ public class RpcCommand {
             {
                 String name = f.getName();
 
-                if (!Modifier.isStatic(f.getModifiers()) &&
-                        !name.startsWith("this")) {
+                if (!Modifier.isStatic(f.getModifiers())) {
 
                     boolean access = f.isAccessible();
 
@@ -347,8 +346,7 @@ public class RpcCommand {
 
             for (Field f : fields)
             {
-                if (!Modifier.isStatic(f.getModifiers()) &&
-                        !f.getName().startsWith("this")) {
+                if (!Modifier.isStatic(f.getModifiers())) {
 
                     boolean access = f.isAccessible();
 
